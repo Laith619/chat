@@ -93,14 +93,14 @@ services:
     image: searxng/searxng
     container_name: lobe-searxng
     volumes:
-      - './searxng-settings.yml:/etc/searxng/settings.yml'
+      - './searxng-settings.yml:/etc/searxng/settings.yml:ro'
     environment:
-      - 'SEARXNG_SETTINGS_FILE=/etc/searxng/settings.yml'
-    restart: always
+      - 'SEARXNG_SETTINGS_PATH=/etc/searxng/settings.yml'
+      - 'UWSGI_WORKERS=2'
+      - 'UWSGI_THREADS=4'
     networks:
       - lobe-network
-    env_file:
-      - .env
+    restart: always
 
   lobe:
     image: lobehub/lobe-chat-database
@@ -135,8 +135,14 @@ services:
       - 'SEARXNG_URL=http://searxng:8080'
       - 'OPENAI_API_KEY=${OPENAI_API_KEY}'
       - 'APP_URL=${APP_URL}'
-      - 'AUTH_URL=${AUTH_URL}'
-      - 'NEXTAUTH_URL=${NEXTAUTH_URL}'
+      - 'AUTH_URL=${APP_URL}/api/auth'
+      - 'NEXTAUTH_URL=${APP_URL}'
+      - 'NEXT_PUBLIC_NEXTAUTH_URL=${APP_URL}'
+      - 'NEXT_PUBLIC_APP_URL=${APP_URL}'
+      - 'NEXT_PUBLIC_API_PREFIX=/api'
+      - 'SESSION_TOKEN_NAME=next-auth.session-token'
+      - 'SESSION_MAX_AGE=2592000'
+      - 'JWT_MAX_AGE=2592000'
       - 'AUTH_CASDOOR_ID=${AUTH_CASDOOR_ID}'
       - 'AUTH_CASDOOR_SECRET=${AUTH_CASDOOR_SECRET}'
       - 'AUTH_CASDOOR_ISSUER=${AUTH_CASDOOR_ISSUER}'
@@ -145,34 +151,46 @@ services:
     env_file:
       - .env
     restart: always
-    entrypoint: >
-      /bin/sh -c "
-        # Check if external Casdoor is accessible
-        echo 'Checking connection to external Casdoor...'
-        if curl -s --head ${AUTH_CASDOOR_ENDPOINT}/.well-known/openid-configuration; then
-          echo 'External Casdoor is accessible!'
-        else
-          echo 'Warning: Could not connect to external Casdoor at ${AUTH_CASDOOR_ENDPOINT}'
-          echo 'Please ensure your Casdoor server is running and accessible.'
+    entrypoint: |
+      /bin/sh -c '
+        # Add retry mechanism for Casdoor connection
+        max_retries=5
+        retry_count=0
+        
+        while [ "$retry_count" -lt "$max_retries" ]; do
+          echo "Checking connection to external Casdoor..."
+          if curl -s --head --max-time 5 "${AUTH_CASDOOR_ENDPOINT}/.well-known/openid-configuration"; then
+            echo "External Casdoor is accessible!"
+            break
+          else
+            retry_count=$((retry_count+1))
+            echo "Warning: Could not connect to external Casdoor at ${AUTH_CASDOOR_ENDPOINT} (Attempt ${retry_count}/${max_retries})"
+            echo "Retrying in 5 seconds..."
+            sleep 5
+          fi
+        done
+
+        if [ "$retry_count" -eq "$max_retries" ]; then
+          echo "Failed to connect to Casdoor after maximum retries"
         fi
         
         # Print Casdoor OIDC configuration for debugging
-        echo 'Casdoor OIDC configuration:'
-        curl -s ${AUTH_CASDOOR_ENDPOINT}/.well-known/openid-configuration | grep -v '^\s*$' || echo 'Could not fetch OIDC configuration'
+        echo "Casdoor OIDC configuration:"
+        curl -s --max-time 5 "${AUTH_CASDOOR_ENDPOINT}/.well-known/openid-configuration" | grep -v "^\s*$" || echo "Could not fetch OIDC configuration"
         
         # Get DNS servers for debugging
-        echo '🌐 DNS Server:' $(cat /etc/resolv.conf | grep nameserver | awk '{print $2}')
+        echo "🌐 DNS Server: $(cat /etc/resolv.conf | grep nameserver | awk "{print \$2}")"
         
         # Print network diagnostics for debugging
-        echo '-------------------------------------'
+        echo "-------------------------------------"
         
-        # Start the application with debug logging
-        echo '[Database] Start to migration...'
-        DEBUG=auth* /bin/node /app/startServer.js &
-        LOBE_PID=\$!
+        # Start the application with enhanced debug logging
+        echo "[Database] Start to migration..."
+        DEBUG=auth*,trpc*,next-auth*,oauth* /bin/node /app/startServer.js &
+        LOBE_PID=$!
         
-        wait \$LOBE_PID
-      "
+        wait $LOBE_PID
+      '
 
 volumes:
   data:

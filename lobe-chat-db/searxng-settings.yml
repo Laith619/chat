@@ -1,39 +1,46 @@
-use_default_settings: true
+use_default_settings: false
+general:
+  debug: false
+  instance_name: "LobeChat SearXNG"
+
 server:
-  secret_key: "change me" # Change this!
+  secret_key: "6007ccbb4f8a249a66e968f724b17c567e96d5079dd90a075edc6402fc291bde"
+  bind_address: "0.0.0.0:8080"
+  base_url: /
   limiter: false
   image_proxy: false
-  method: "GET"
   default_http_headers:
-    X-Content-Type-Options : nosniff
-    X-XSS-Protection : 1; mode=block
-    X-Download-Options : noopen
-    X-Robots-Tag : noindex, nofollow
-    Referrer-Policy : no-referrer
+    X-Content-Type-Options: nosniff
+    X-XSS-Protection: 1; mode=block
+    X-Download-Options: noopen
+    X-Robots-Tag: noindex, nofollow
+    Referrer-Policy: no-referrer
+
+search:
+  safe_search: 0
+  autocomplete: "google"
+  default_lang: "en"
+  formats:
+    - html
+    - json
+    - csv
+    - rss
+
+engines:
+  - name: google
+    engine: google
+    shortcut: g
+    disabled: false
 
 ui:
   static_use_hash: true
   default_theme: simple
   default_locale: en
-  results_on_new_tab: false
+  query_in_title: false
 
-general:
-  debug: false
-  instance_name: "LobeChat SearXNG"
-  contact_url: false
-  enable_metrics: true
+doi_resolvers:
+  sci-hub.se: https://sci-hub.se/{}
+  oadoi.org: https://oadoi.org/{}
+  doi.org: https://doi.org/{}
 
-search:
-  safe_search: 0
-  autocomplete: ""
-  default_lang: ""
-
-server:
-  bind_address: "0.0.0.0"
-  port: 8080
-  limiter: false
-  public_instance: false
-  image_proxy: false
-
-redis:
-  url: false
+default_doi_resolver: doi.org
