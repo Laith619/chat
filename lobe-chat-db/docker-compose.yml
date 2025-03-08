@@ -1,0 +1,185 @@
+name: lobe-chat-database
+services:
+  network-service:
+    image: alpine
+    container_name: lobe-network
+    restart: always
+    ports:
+      - '${MINIO_PORT}:${MINIO_PORT}' # MinIO API
+      - '9001:9001' # MinIO Console
+      - '${CASDOOR_PORT}:${CASDOOR_PORT}' # Casdoor
+      - '${LOBE_PORT}:3210' # LobeChat
+    command: tail -f /dev/null
+    networks:
+      - lobe-network
+
+  postgresql:
+    image: pgvector/pgvector:pg17
+    container_name: lobe-postgres
+    ports:
+      - '5433:5432'
+    volumes:
+      - './data:/var/lib/postgresql/data'
+    environment:
+      - 'POSTGRES_DB=${LOBE_DB_NAME}'
+      - 'POSTGRES_PASSWORD=${POSTGRES_PASSWORD}'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: always
+    networks:
+      - lobe-network
+
+  minio:
+    image: minio/minio
+    container_name: lobe-minio
+    network_mode: 'service:network-service'
+    volumes:
+      - './s3_data:/etc/minio/data'
+    environment:
+      - 'MINIO_API_CORS_ALLOW_ORIGIN=*'
+      - 'MINIO_BROWSER_REDIRECT_URL=http://localhost:9001'
+      - 'MINIO_DOMAIN=localhost'
+      - 'MINIO_CORS_ALLOW_ORIGINS=http://localhost:3210'
+    env_file:
+      - .env
+    restart: always
+    entrypoint: >
+      /bin/sh -c "
+        # Start MinIO server
+        minio server /etc/minio/data --address ':${MINIO_PORT}' --console-address ':9001' &
+        MINIO_PID=\$!
+        
+        # Wait for MinIO to be ready
+        while ! curl -s http://localhost:${MINIO_PORT}/minio/health/live; do
+          echo 'Waiting for MinIO to start...'
+          sleep 1
+        done
+        sleep 5
+        
+        # Configure MinIO client
+        mc alias set myminio http://localhost:${MINIO_PORT} ${MINIO_ROOT_USER} ${MINIO_ROOT_PASSWORD}
+        
+        # Create bucket if it doesn't exist
+        if ! mc ls myminio | grep -q ${MINIO_LOBE_BUCKET}; then
+          echo 'Creating bucket ${MINIO_LOBE_BUCKET}'
+          mc mb myminio/${MINIO_LOBE_BUCKET}
+        fi
+        
+        # Set bucket policy for public access
+        mc policy set download myminio/${MINIO_LOBE_BUCKET}
+        
+        # Configure CORS
+        mc anonymous set download myminio/${MINIO_LOBE_BUCKET}
+        
+        # Set CORS rule (key=value format)
+        echo 'AllowedHeaders=*' > /tmp/cors.conf
+        echo 'AllowedMethods=GET,PUT,POST,DELETE' >> /tmp/cors.conf
+        echo 'AllowedOrigins=http://localhost:3210' >> /tmp/cors.conf
+        echo 'ExposeHeaders=ETag,Content-Length,Content-Type' >> /tmp/cors.conf
+        
+        # Try different CORS configuration methods
+        mc cors set myminio/${MINIO_LOBE_BUCKET} /tmp/cors.json 2>/dev/null || \
+        mc cors add myminio/${MINIO_LOBE_BUCKET} --allow-origin 'http://localhost:3210' --allow-method 'GET,PUT,POST,DELETE' --allow-header '*' 2>/dev/null || \
+        echo 'CORS configuration attempted via mc command'
+        
+        # Wait for the MinIO process
+        wait \$MINIO_PID
+      "
+
+  searxng:
+    image: searxng/searxng
+    container_name: lobe-searxng
+    volumes:
+      - './searxng-settings.yml:/etc/searxng/settings.yml'
+    environment:
+      - 'SEARXNG_SETTINGS_FILE=/etc/searxng/settings.yml'
+    restart: always
+    networks:
+      - lobe-network
+    env_file:
+      - .env
+
+  lobe:
+    image: lobehub/lobe-chat-database
+    container_name: lobe-chat
+    network_mode: 'service:network-service'
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      network-service:
+        condition: service_started
+      minio:
+        condition: service_started
+    environment:
+      - 'NEXT_PUBLIC_SERVICE_MODE=server'
+      - 'NEXT_PUBLIC_ENABLE_NEXT_AUTH=1'
+      - 'NEXT_AUTH_SSO_PROVIDERS=casdoor'
+      - 'KEY_VAULTS_SECRET=Kix2wcUONd4CX51E/ZPAd36BqM4wzJgKjPtz2sGztqQ='
+      - 'NEXT_AUTH_SECRET=${NEXT_AUTH_SECRET}'
+      - 'DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD}@postgresql:5432/${LOBE_DB_NAME}'
+      - 'S3_BUCKET=${MINIO_LOBE_BUCKET}'
+      - 'S3_ENDPOINT=http://localhost:${MINIO_PORT}'
+      - 'S3_REGION=us-east-1'
+      - 'S3_ENABLE_PATH_STYLE=1'
+      - 'S3_ACCESS_KEY=${MINIO_ROOT_USER}'
+      - 'S3_ACCESS_KEY_ID=${MINIO_ROOT_USER}'
+      - 'S3_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}'
+      - 'LLM_VISION_IMAGE_USE_BASE64=1'
+      - 'S3_SET_ACL=0'
+      - 'S3_PUBLIC_DOMAIN=http://localhost:${MINIO_PORT}'
+      - 'S3_FORCE_PATH_STYLE=true'
+      - 'S3_SSL_ENABLED=false'
+      - 'SEARXNG_URL=http://searxng:8080'
+      - 'OPENAI_API_KEY=${OPENAI_API_KEY}'
+      - 'APP_URL=${APP_URL}'
+      - 'AUTH_URL=${AUTH_URL}'
+      - 'NEXTAUTH_URL=${NEXTAUTH_URL}'
+      - 'AUTH_CASDOOR_ID=${AUTH_CASDOOR_ID}'
+      - 'AUTH_CASDOOR_SECRET=${AUTH_CASDOOR_SECRET}'
+      - 'AUTH_CASDOOR_ISSUER=${AUTH_CASDOOR_ISSUER}'
+      - 'AUTH_CASDOOR_ENDPOINT=${AUTH_CASDOOR_ENDPOINT}'
+      - 'DEFAULT_FILES_CONFIG=embedding_model=openai/text-embedding-3-small'
+    env_file:
+      - .env
+    restart: always
+    entrypoint: >
+      /bin/sh -c "
+        # Check if external Casdoor is accessible
+        echo 'Checking connection to external Casdoor...'
+        if curl -s --head ${AUTH_CASDOOR_ENDPOINT}/.well-known/openid-configuration; then
+          echo 'External Casdoor is accessible!'
+        else
+          echo 'Warning: Could not connect to external Casdoor at ${AUTH_CASDOOR_ENDPOINT}'
+          echo 'Please ensure your Casdoor server is running and accessible.'
+        fi
+        
+        # Print Casdoor OIDC configuration for debugging
+        echo 'Casdoor OIDC configuration:'
+        curl -s ${AUTH_CASDOOR_ENDPOINT}/.well-known/openid-configuration | grep -v '^\s*$' || echo 'Could not fetch OIDC configuration'
+        
+        # Get DNS servers for debugging
+        echo '🌐 DNS Server:' $(cat /etc/resolv.conf | grep nameserver | awk '{print $2}')
+        
+        # Print network diagnostics for debugging
+        echo '-------------------------------------'
+        
+        # Start the application with debug logging
+        echo '[Database] Start to migration...'
+        DEBUG=auth* /bin/node /app/startServer.js &
+        LOBE_PID=\$!
+        
+        wait \$LOBE_PID
+      "
+
+volumes:
+  data:
+    driver: local
+  s3_data:
+    driver: local
+
+networks:
+  lobe-network:
+    driver: bridge

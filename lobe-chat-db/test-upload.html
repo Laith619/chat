@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MinIO Upload Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    .result { margin-top: 20px; padding: 10px; border: 1px solid #ddd; }
+    button { padding: 10px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+    input[type="file"] { margin: 10px 0; }
+  </style>
+</head>
+<body>
+  <h1>MinIO Upload Test</h1>
+  <div>
+    <input type="file" id="fileInput" />
+    <button onclick="uploadFile()">Upload to MinIO</button>
+  </div>
+  <div class="result" id="result">Results will appear here</div>
+
+  <script>
+    async function uploadFile() {
+      const fileInput = document.getElementById('fileInput');
+      const resultDiv = document.getElementById('result');
+      
+      if (!fileInput.files.length) {
+        resultDiv.textContent = 'Please select a file first';
+        return;
+      }
+      
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      resultDiv.textContent = 'Uploading...';
+      
+      try {
+        const response = await fetch('http://localhost:9000/lobe/' + file.name, {
+          method: 'PUT',
+          body: file,
+          headers: {
+            'Content-Type': file.type
+          }
+        });
+        
+        if (response.ok) {
+          resultDiv.innerHTML = '<strong>Upload successful!</strong><br>' +
+            'File URL: <a href="http://localhost:9000/lobe/' + file.name + '" target="_blank">' +
+            'http://localhost:9000/lobe/' + file.name + '</a>';
+        } else {
+          resultDiv.textContent = 'Upload failed: ' + response.status + ' ' + response.statusText;
+        }
+      } catch (error) {
+        resultDiv.textContent = 'Error: ' + error.message;
+      }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+use_default_settings: true
+server:
+  secret_key: "change me" # Change this!
+  limiter: false
+  image_proxy: false
+  method: "GET"
+  default_http_headers:
+    X-Content-Type-Options : nosniff
+    X-XSS-Protection : 1; mode=block
+    X-Download-Options : noopen
+    X-Robots-Tag : noindex, nofollow
+    Referrer-Policy : no-referrer
+
+ui:
+  static_use_hash: true
+  default_theme: simple
+  default_locale: en
+  results_on_new_tab: false
+
+general:
+  debug: false
+  instance_name: "LobeChat SearXNG"
+  contact_url: false
+  enable_metrics: true
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: ""
+
+server:
+  bind_address: "0.0.0.0"
+  port: 8080
+  limiter: false
+  public_instance: false
+  image_proxy: false
+
+redis:
+  url: false

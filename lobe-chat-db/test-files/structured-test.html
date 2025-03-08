@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG Testing Document</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #2980b9;
+            margin-top: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .code {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 15px;
+            font-family: monospace;
+            overflow-x: auto;
+        }
+        .important {
+            background-color: #ffe6e6;
+            padding: 10px;
+            border-left: 4px solid #ff5555;
+        }
+    </style>
+</head>
+<body>
+    <h1>RAG Testing Document for LobeChat</h1>
+    
+    <p>This document contains structured information specifically designed to test the Retrieval-Augmented Generation (RAG) capabilities of LobeChat.</p>
+    
+    <h2>Section 1: Unique Factual Information</h2>
+    
+    <p>The following facts are uniquely worded to make it clear if they're being retrieved from this document:</p>
+    
+    <ul>
+        <li>The artificially created element with atomic number 117 is named Tennessine (Ts).</li>
+        <li>The programming language COBOL was developed by Dr. Grace Hopper in 1959.</li>
+        <li>The Dyatlov Pass incident occurred on February 1, 1959, when nine Russian hikers died mysteriously in the northern Ural Mountains.</li>
+        <li>The world's heaviest organism is believed to be the Pando aspen grove in Utah, weighing approximately 6,000 metric tons.</li>
+        <li>The smallest bone in the human body is the stapes (stirrup) in the middle ear, measuring only about 3 millimeters.</li>
+    </ul>
+    
+    <h2>Section 2: Test Data Table</h2>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Country</th>
+                <th>Capital</th>
+                <th>Population</th>
+                <th>Official Language</th>
+                <th>Currency</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Wakanda</td>
+                <td>Birnin Zana</td>
+                <td>6.5 million</td>
+                <td>Wakandan</td>
+                <td>Wakandan Vibranium</td>
+            </tr>
+            <tr>
+                <td>Genovia</td>
+                <td>Pyrus</td>
+                <td>57,300</td>
+                <td>French</td>
+                <td>Euro</td>
+            </tr>
+            <tr>
+                <td>Lilliput</td>
+                <td>Mildendo</td>
+                <td>25,000</td>
+                <td>Lilliputian</td>
+                <td>Sprug</td>
+            </tr>
+            <tr>
+                <td>Gilead</td>
+                <td>New Bethlehem</td>
+                <td>4.2 million</td>
+                <td>English</td>
+                <td>Gileadian Dollar</td>
+            </tr>
+            <tr>
+                <td>Latveria</td>
+                <td>Doomstadt</td>
+                <td>500,000</td>
+                <td>Latverian</td>
+                <td>Latverian Franc</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <p class="important">Note: All countries in this table are fictional and created for testing purposes.</p>
+    
+    <h2>Section 3: Technical Information</h2>
+    
+    <h3>3.1 Sample Code</h3>
+    
+    <div class="code">
+        <pre>
+// JavaScript implementation of the Fibonacci sequence
+function fibonacci(n) {
+    if (n <= 1) return n;
+    
+    let a = 0, b = 1;
+    for (let i = 2; i <= n; i++) {
+        const temp = a + b;
+        a = b;
+        b = temp;
+    }
+    
+    return b;
+}
+
+// Calculate the first 10 Fibonacci numbers
+for (let i = 0; i < 10; i++) {
+    console.log(`Fibonacci(${i}) = ${fibonacci(i)}`);
+}
+        </pre>
+    </div>
+    
+    <h3>3.2 RAG-Specific Testing Instructions</h3>
+    
+    <p>When testing the knowledge base functionality with this document, try asking these specific questions:</p>
+    
+    <ol>
+        <li>What is the capital of Wakanda?</li>
+        <li>What is the smallest bone in the human body according to the document?</li>
+        <li>What incident happened in 1959 in the Ural Mountains?</li>
+        <li>Can you show me the JavaScript code for calculating Fibonacci numbers?</li>
+        <li>What is the population of Genovia?</li>
+        <li>Which fictional country has Doomstadt as its capital?</li>
+        <li>What is the heaviest organism mentioned in the document?</li>
+    </ol>
+    
+    <h2>Section 4: Verification Token</h2>
+    
+    <p>The following verification token can be used to confirm this document was properly processed:</p>
+    
+    <p style="background: #e8f4f8; padding: 10px; font-family: monospace;">
+        LOBE-RAG-TEST-DOC-827AB395DC
+    </p>
+    
+    <p>If the AI can correctly provide this token when asked, it confirms the document was successfully indexed.</p>
+
+    <hr>
+    
+    <footer>
+        <p><strong>Document ID:</strong> TEST-HTML-DOC-001</p>
+        <p><strong>Created for:</strong> LobeChat Knowledge Base Testing</p>
+        <p><strong>Date:</strong> March 6, 2025</p>
+    </footer>
+</body>
+</html>

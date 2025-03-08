@@ -1,0 +1,42 @@
+
+services:
+  lobe:
+    environment:
+      # Add additional auth configuration
+      - 'DATABASE_AUTH_ENABLED=true'
+      - 'NEXT_PUBLIC_AUTH_ENABLED=true'
+      - 'NEXT_PUBLIC_DATABASE_AUTH_ENABLED=true'
+      - 'SESSION_TOKEN_LIFETIME=2592000' # 30 days
+      - 'SESSION_TOKEN_UPDATE_AGE=86400' # 1 day
+      # File and knowledge base permissions
+      - 'S3_ENSURE_BUCKET_EXISTS=true'
+      - 'PGVECTOR_INDEX_ENABLED=true'
+      - 'FILE_UPLOAD_SIZE_LIMIT=10485760' # 10MB
+      # Debug
+      - 'DEBUG=auth*,prisma*,next-auth*,s3*'
+    volumes:
+      # Add persistent volume for session data
+      - lobe_data:/app/.next
+      - lobe_node_modules:/app/node_modules
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3210/api/health"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  minio:
+    environment:
+      # Enhanced CORS settings
+      - 'MINIO_BROWSER_CORS_ALLOW_ORIGIN=*'
+      - 'MINIO_API_CORS_ALLOW_ORIGIN=*'
+      # Public access settings
+      - 'MINIO_ANONYMOUS=true'
+    volumes:
+      - './s3_data:/etc/minio/data'
+    restart: always
+
+volumes:
+  lobe_data:
+  lobe_node_modules:
